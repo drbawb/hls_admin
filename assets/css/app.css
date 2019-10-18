@@ -1,3 +1,6 @@
 /* This file is for your main application css. */
 
 @import "./phoenix.css";
+
+.fs-dir  { background-color: #5aa4ff; }
+.fs-file { background-color: #855aff; }

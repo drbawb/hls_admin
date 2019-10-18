@@ -2,13 +2,20 @@
 <h3>UI Process: <%= inspect @ui_pid %></h3>
 <hr>
 
-<form action="#" phx-submit="add">
-  <%= text_input :path, :dir, placeholder: "Enter dir" %>
-  <%= submit "Push", phx_disable_with: "Please Wait" %>
-</form>
-
 <p>Current dir: <%= @cwd %></p>
 
 <%= for dir <- @dirs do %>
-  <h3><%= inspect dir %></h3>
+  <section class="row">
+    <%= case dir do %>
+      <%= {:dir, dir_path} -> %>
+        <%= content_tag :button, class: "fs-dir", phx_click: "add", phx_value_path: dir_path do %>
+          <span><%= dir_path %></span>
+        <% end %>
+
+      <%= {:file, file_path} -> %>
+        <%= content_tag :button, class: "fs-file", phx_click: "select", phx_value_path: file_path do %>
+          <span><%= file_path %></span>
+        <% end %>
+    <% end %>
+  </section>
 <% end %>

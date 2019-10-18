@@ -14,7 +14,7 @@ defmodule HlsAdmin.AdminUI do
   parent path.
   """
   
-  @initial_config %{parent_path: "/", path_segments: []}
+  @initial_config %{parent_path: "/mnt/media", path_segments: []}
 
   def init(_state) do
     {:ok, @initial_config}
@@ -48,6 +48,7 @@ defmodule HlsAdmin.AdminUI do
 
     {:ok, ents} = File.ls(absolute_dir)
     ents = ents
+           |> Enum.sort(&(&1 <= &2))
            |> Enum.map(fn ent ->
              %{
                rel: ent,

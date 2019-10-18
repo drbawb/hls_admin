@@ -34,9 +34,14 @@ defmodule HlsAdminWeb.AdminView do
     # push path onto stack
     Logger.info "got add event: #{inspect path}"
     ui_pid = socket.assigns.ui_pid
-    :ok = GenServer.call(ui_pid, {:push, path["dir"]})
+    :ok = GenServer.call(ui_pid, {:push, path})
 
     # update view
+    {:noreply, fetch(socket)}
+  end
+
+  def handle_event("select", %{"path" => path}, socket) do
+    Logger.info "selected file: #{inspect path}"
     {:noreply, fetch(socket)}
   end
 
