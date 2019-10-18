@@ -1,0 +1,14 @@
+<h2>Admin View</h2>
+<h3>UI Process: <%= inspect @ui_pid %></h3>
+<hr>
+
+<form action="#" phx-submit="add">
+  <%= text_input :path, :dir, placeholder: "Enter dir" %>
+  <%= submit "Push", phx_disable_with: "Please Wait" %>
+</form>
+
+<p>Current dir: <%= @cwd %></p>
+
+<%= for dir <- @dirs do %>
+  <h3><%= inspect dir %></h3>
+<% end %>
