@@ -7,12 +7,12 @@
 <%= for dir <- @dirs do %>
   <section class="row">
     <%= case dir do %>
-      <%= {:dir, dir_path} -> %>
+      <% {:dir, dir_path} -> %>
         <%= content_tag :button, class: "fs-dir", phx_click: "add", phx_value_path: dir_path do %>
           <span><%= dir_path %></span>
         <% end %>
 
-      <%= {:file, file_path} -> %>
+      <% {:file, file_path} -> %>
         <%= content_tag :button, class: "fs-file", phx_click: "select", phx_value_path: file_path do %>
           <span><%= file_path %></span>
         <% end %>

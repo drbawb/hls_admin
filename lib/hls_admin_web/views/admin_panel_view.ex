@@ -10,14 +10,13 @@ defmodule HlsAdminWeb.AdminView do
     {:ok, dirs} = GenServer.call(ui_pid, :enumerate)
     {:ok, cwd}  = GenServer.call(ui_pid, :cwd)
 
-    socket = socket
-             |> assign(:cwd, cwd)
-             |> assign(:dirs, dirs)
+    socket
+    |> assign(:cwd, cwd)
+    |> assign(:dirs, dirs)
   end
 
   def mount(_session, socket) do
     {:ok, ui_pid} = GenServer.start_link(HlsAdmin.AdminUI, [])
-    {:ok, dirs} = GenServer.call(ui_pid, :enumerate)
 
     socket = socket
              |> assign(:ui_pid, ui_pid)
@@ -43,9 +42,5 @@ defmodule HlsAdminWeb.AdminView do
   def handle_event("select", %{"path" => path}, socket) do
     Logger.info "selected file: #{inspect path}"
     {:noreply, fetch(socket)}
-  end
-
-  def terminate(reason, socket) do
-    Logger.debug "oh bye..."
   end
 end

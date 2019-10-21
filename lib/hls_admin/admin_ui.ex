@@ -20,11 +20,6 @@ defmodule HlsAdmin.AdminUI do
     {:ok, @initial_config}
   end
 
-  def terminate(reason, _state) do
-    Logger.debug "admin UI proc going away ..."
-    {:ok, nil}
-  end
-
   defp util_relative_dir(state) do
     state.path_segments
     |> List.foldl("", fn (el,acc) -> Path.join(acc, el) end)
@@ -74,7 +69,7 @@ defmodule HlsAdmin.AdminUI do
     end
   end
 
-  def handle_call({:push, dir}, _from, state) do 
+  def handle_call({:push, _dir}, _from, state) do
     {:reply, {:error, :push_check_path_type}, state}
   end
 
