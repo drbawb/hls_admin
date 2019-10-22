@@ -1,21 +1,89 @@
+<%= if @show_picker do %>
+  <div class="modal">
+    <div class="fs-picker-modal">
+      <div class="modal-heading">
+        <h3>Choose File</h3>
+        <span class="modal-close" phx-click="choose_close">X</span>
+      </div>
+      <div class="fs-picker-ents">
+        <%= for dir <- @dirs do %>
+          <div class="fs-picker-ent">[dir] <%= dir %></div>
+        <% end %>
+
+        <%= for file <- @files do %>
+          <div class="fs-picker-ent">[file] <%= file %></div>
+        <% end %>
+      </div>
+    </div>
+    <div class="fs-picker-buttons">
+    </div>
+  </div>
+<% end %>
+
 <h2>Admin View</h2>
 <h3>UI Process: <%= inspect @ui_pid %></h3>
 <hr>
 
-<p>Current dir: <%= @cwd %></p>
+<div class="fs-selection">
+  <div class="fs-selection-file">
+    <h3>File Selection</h3>
+    <div class="fs-file">
+      <div class="fs-chooser-heading">
+        <h3>Video File</h3>
+        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_video" %>
+      </div>
 
-<%= for dir <- @dirs do %>
-  <section class="row">
-    <%= case dir do %>
-      <% {:dir, dir_path} -> %>
-        <%= content_tag :button, class: "fs-dir", phx_click: "add", phx_value_path: dir_path do %>
-          <span><%= dir_path %></span>
+      <span class="fs-chooser-body">
+        <%= if @current_video do %>
+          <%= @current_video %>
+        <% else %>
+          (No file selected.)
         <% end %>
+      </span>
+    </div>
 
-      <% {:file, file_path} -> %>
-        <%= content_tag :button, class: "fs-file", phx_click: "select", phx_value_path: file_path do %>
-          <span><%= file_path %></span>
+    <div class="fs-file">
+      <div class="fs-chooser-heading">
+        <h3>Subtitle File</h3>
+        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_subtitles" %>
+      </div>
+
+      <span class="fs-chooser-body">
+        <%= if @current_subs do %>
+          <%= @current_subs %>
+        <% else %>
+          (No file selected.)
         <% end %>
-    <% end %>
-  </section>
-<% end %>
+      </span>
+    </div>
+  </div>
+
+  <div class="fs-selection-stream">
+    <h3>Stream Selection</h3>
+    <form phx-change="stream_validate" phx-submit="stream_save">
+      <label for="video_idx">Video stream</label>
+      <select name="video_idx">
+        <option value="" selected hidden>Choose One ...</option>
+      </select>
+      <br><br>
+
+      <label for="audio_idx">Audio stream</label>
+      <select name="audio_idx">
+        <option value="" selected hidden>Choose One ...</option>
+      </select>
+      <br><br>
+
+      <label for="subs_idx">Subtitles</label>
+      <select name="subs_idx">
+        <option value="" selected hidden>Choose One ...</option>
+        <option value="disabled">Disabled</option>
+      </select>
+      <br><br>
+
+      <%= submit "Start", class: "btn-primary" %>
+    </form>
+
+
+
+  </div>
+</div>

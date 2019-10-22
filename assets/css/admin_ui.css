@@ -1,0 +1,30 @@
+.fs-picker-ent {
+	cursor: pointer;
+	padding: 2px;
+	border: 1px #000000 solid;
+}
+
+.fs-picker-ent:hover {
+	background-color: #bababa;
+}
+
+.fs-selection {
+	display: grid;
+	grid-template-columns: 4fr 8fr;
+}
+
+.fs-file {
+  margin: 25px 5px 25px 5px;
+  padding: 10px;
+  border: 1px #000 solid;
+}
+
+.fs-chooser-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-chooser-body {
+  font-size: .75em;
+}
