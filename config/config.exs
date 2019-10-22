@@ -10,6 +10,12 @@ use Mix.Config
 config :hls_admin,
   ecto_repos: [HlsAdmin.Repo]
 
+# Configure FFMPEG Server Process
+config :hls_admin, HlsAdmin.FfmpegServer,
+  hls_root: "/srv/hls",
+  playlist: "cdn00"
+
+
 # Configures the endpoint
 config :hls_admin, HlsAdminWeb.Endpoint,
   url: [host: "localhost"],

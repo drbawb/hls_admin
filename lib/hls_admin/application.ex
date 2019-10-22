@@ -11,7 +11,9 @@ defmodule HlsAdmin.Application do
       # Start the Ecto repository
       HlsAdmin.Repo,
       # Start the endpoint when the application starts
-      HlsAdminWeb.Endpoint
+      HlsAdminWeb.Endpoint,
+      # Start the FFMPEG Manager Process
+      HlsAdmin.FfmpegServer,
       # Starts a worker by calling: HlsAdmin.Worker.start_link(arg)
       # {HlsAdmin.Worker, arg},
     ]
