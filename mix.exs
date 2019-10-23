@@ -45,6 +45,7 @@ defmodule HlsAdmin.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:porcelain, "~> 2.0"},
+      {:timex, "~> 3.0"}
     ]
   end
 
