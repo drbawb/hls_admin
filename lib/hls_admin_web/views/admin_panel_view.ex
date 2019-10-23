@@ -6,7 +6,6 @@ defmodule HlsAdminWeb.AdminView do
 
   defp fetch(socket) do
     ui_pid = socket.assigns.ui_pid
-
     {:ok, ents} = GenServer.call(ui_pid, :enumerate)
     {:ok, cwd}  = GenServer.call(ui_pid, :cwd)
 
@@ -22,6 +21,33 @@ defmodule HlsAdminWeb.AdminView do
     |> assign(:cwd, cwd)
     |> assign(:dirs, ents[:dir] || [])
     |> assign(:files, ents[:file] || [])
+    |> load_streams()
+  end
+
+  defp load_streams(socket) do
+    # first load all streams from the video (if avail)
+    socket = case socket.assigns.current_video do
+      nil  -> socket
+      path ->
+        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
+        Logger.debug "video resp: #{inspect probe_resp}"
+
+        socket
+        |> assign(:opts_video, probe_resp[:video] || [])
+        |> assign(:opts_audio, probe_resp[:audio] || [])
+        |> assign(:opts_subs,  probe_resp[:subtitle] || [])
+    end
+
+    # next load *just* subtitle streams
+    socket = case socket.assigns.current_subs do
+      nil -> socket
+      path ->
+        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
+        Logger.debug "subs resp: #{inspect probe_resp}"
+
+        socket
+        |> assign(:opts_subs, probe_resp[:subtitle] || [])
+    end
   end
 
   def mount(_session, socket) do
@@ -32,6 +58,9 @@ defmodule HlsAdminWeb.AdminView do
       |> assign(:show_picker, false)
       |> assign(:current_video, nil)
       |> assign(:current_subs, nil)
+      |> assign(:opts_video, [])
+      |> assign(:opts_audio, [])
+      |> assign(:opts_subs, [])
       |> assign(:ui_pid, ui_pid)
       |> fetch()
 
@@ -53,7 +82,7 @@ defmodule HlsAdminWeb.AdminView do
   end
 
   # show file picker in video mode
-  def handle_event("choose_video", params, socket) do
+  def handle_event("choose_video", _params, socket) do
     socket = 
       socket
       |> assign(:picker_mode, "video")
@@ -63,7 +92,7 @@ defmodule HlsAdminWeb.AdminView do
   end
 
   # show file picker in subtitle mode
-  def handle_event("choose_subtitles", params, socket) do
+  def handle_event("choose_subtitles", _params, socket) do
     socket = 
       socket
       |> assign(:picker_mode, "subtitles")
@@ -72,7 +101,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
-  def handle_event("add", %{"path" => path}, socket) do
+  def handle_event("push", %{"path" => path}, socket) do
     # push path onto stack
     Logger.info "got add event: #{inspect path}"
     ui_pid = socket.assigns.ui_pid
@@ -82,8 +111,31 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
-  def handle_event("select", %{"path" => path}, socket) do
-    Logger.info "selected file: #{inspect path}"
+  def handle_event("pop", _params, socket) do
+    Logger.info "got pop event"
+    ui_pid = socket.assigns.ui_pid
+    :ok = GenServer.call(ui_pid, :pop)
+    {:noreply, fetch(socket)}
+  end
+
+  def handle_event("choose", %{"path" => path}, socket) do
+    ui_pid = socket.assigns.ui_pid
+    {:ok, cwd} = GenServer.call(ui_pid, :cwd)
+    full_path = Path.join(cwd, path)
+    Logger.debug "selected file: #{inspect full_path}"
+    Logger.debug "selected mode: #{inspect socket.assigns.picker_mode}"
+
+    current_sym = case socket.assigns.picker_mode do
+      "video" -> :current_video
+      "subtitles" -> :current_subs
+    end
+
+    socket =
+      socket
+      |> assign(:picker_mode, nil)
+      |> assign(:show_picker, false)
+      |> assign(current_sym, full_path)
+
     {:noreply, fetch(socket)}
   end
 

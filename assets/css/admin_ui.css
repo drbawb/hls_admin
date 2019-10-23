@@ -1,7 +1,13 @@
+.fs-picker-ents {
+	max-height: 50vh;
+	overflow-y: scroll;
+}
+
 .fs-picker-ent {
 	cursor: pointer;
 	padding: 2px;
 	border: 1px #000000 solid;
+	word-wrap: anywhere;
 }
 
 .fs-picker-ent:hover {

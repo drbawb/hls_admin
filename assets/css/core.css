@@ -34,7 +34,7 @@ body {
 }
 
 .modal > * {
-  margin: 25% auto;
+  margin: 50px auto;
   padding: 10px;
   width: 80%; max-width: 480px;
 

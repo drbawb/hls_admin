@@ -6,16 +6,23 @@
         <span class="modal-close" phx-click="choose_close">X</span>
       </div>
       <div class="fs-picker-ents">
+        <div>
+          <%= content_tag :button, class: "btn-primary", phx_click: "pop" do %>
+            Go Up One Level
+          <% end %>
+        </div>
         <%= for dir <- @dirs do %>
-          <div class="fs-picker-ent">[dir] <%= dir %></div>
+          <%= content_tag :div, class: "fs-picker-ent", phx_click: "push", phx_value_path: dir do %>
+            [dir] <%= dir %>
+          <% end %>
         <% end %>
 
         <%= for file <- @files do %>
-          <div class="fs-picker-ent">[file] <%= file %></div>
+          <%= content_tag :div, class: "fs-picker-ent", phx_click: "choose", phx_value_path: file do %>
+            [file] <%= file %>
+          <% end %>
         <% end %>
       </div>
-    </div>
-    <div class="fs-picker-buttons">
     </div>
   </div>
 <% end %>
@@ -64,12 +71,24 @@
       <label for="video_idx">Video stream</label>
       <select name="video_idx">
         <option value="" selected hidden>Choose One ...</option>
+
+        <%= for track <- @opts_video do %>
+          <%= content_tag :option, value: track.idx do %>
+            <span>[<%= track.name %>] [<%= track.lang %>]</span>
+          <% end %>
+        <% end %>
       </select>
       <br><br>
 
       <label for="audio_idx">Audio stream</label>
       <select name="audio_idx">
         <option value="" selected hidden>Choose One ...</option>
+
+        <%= for track <- @opts_audio do %>
+          <%= content_tag :option, value: track.idx do %>
+            <span>[<%= track.name %>] [<%= track.lang %>] - <%= track.title %></span>
+          <% end %>
+        <% end %>
       </select>
       <br><br>
 
@@ -77,6 +96,13 @@
       <select name="subs_idx">
         <option value="" selected hidden>Choose One ...</option>
         <option value="disabled">Disabled</option>
+
+        <%= for track <- @opts_subs do %>
+          <%= content_tag :option, value: track.idx do %>
+            <span>[<%= track.name %>] [<%= track.lang %>] - <%= track.title %></span>
+          <% end %>
+        <% end %>
+
       </select>
       <br><br>
 
