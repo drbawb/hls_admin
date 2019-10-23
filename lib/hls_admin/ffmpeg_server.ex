@@ -48,6 +48,11 @@ defmodule HlsAdmin.FfmpegServer do
     GenServer.call(__MODULE__, :runlevel)
   end
 
+  @doc "Returns ffmpeg server status block."
+  def status() do
+    GenServer.call(__MODULE__, :status)
+  end
+
 
   #
   # Callbacks
@@ -61,7 +66,8 @@ defmodule HlsAdmin.FfmpegServer do
     {:ok, %{
       runlevel: :stopped,
       root: config_block[:hls_root],
-      playlist: config_block[:playlist]
+      playlist: config_block[:playlist],
+      pid_waits: [],
     }}
   end
 
@@ -69,7 +75,19 @@ defmodule HlsAdmin.FfmpegServer do
     GenServer.start_link(__MODULE__, default, name: __MODULE__)
   end
 
-  def handle_call(:runlevel, _from, state), do: {:reply, state.runlevel, state}
+  def handle_call(:status, _from, state) do
+    {:ok, server_time} = 
+      Timex.local 
+      |> Timex.format("{YYYY}-{0M}-{0D} {0h12}:{0m}:{0s} {AM}")
+
+    status_block = %{
+      time: server_time,
+      runlevel: state.runlevel,
+      ffmpeg_procs_alive: num_running_tasks(state),
+    }
+
+    {:reply, status_block, state}
+  end
 
   def handle_call({:start, config}, _from, state = %{runlevel: :stopped}) do
     alias HlsAdmin.FfmpegServer.ProfSetting
@@ -108,12 +126,14 @@ defmodule HlsAdmin.FfmpegServer do
       |> Enum.map(fn {awaiter, shell} -> {awaiter, {:running, shell}} end)
       |> Map.new()
 
+
     state =
       state
       |> Map.put(:pid_waits, pid_wait_states)
       |> Map.put(:runlevel, :running)
       |> Map.put(:config, %{mux: config, profiles: levels})
 
+    Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, state.runlevel}
     {:reply, {:ok, procs}, %{state | pid_waits: pid_wait_states}}
   end
 
@@ -150,10 +170,6 @@ defmodule HlsAdmin.FfmpegServer do
     end
 
     {:reply, probe, state}
-  end
-
-  def handle_call(:force_stop, _from, state) do
-    %{state | runlevel: :stopped}
   end
 
   # await ffmpeg processes and clean up when they're done ...
@@ -199,12 +215,21 @@ defmodule HlsAdmin.FfmpegServer do
         |> Enum.map(fn el -> File.rm(el) end)
     end
 
+    Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, :stopped}
     %{state | runlevel: :stopped}
   end
 
   defp cleanup_stopping(state), do: state
 
   defp update_runlevel(state) do
+    num_running = num_running_tasks(state)
+    new_runlevel = if num_running > 0, do: :running, else: :stopping
+
+    Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, new_runlevel}
+    %{state | runlevel: new_runlevel}
+  end
+
+  defp num_running_tasks(state) do
     live_ents = for {_pid, {status, _}} <- state.pid_waits do
       status == :running
     end
@@ -213,10 +238,6 @@ defmodule HlsAdmin.FfmpegServer do
       live_ents
       |> Enum.filter(fn el -> el end)
       |> Enum.count()
-
-    new_runlevel = if num_running > 0, do: :running, else: :stopping
-
-    %{state | runlevel: new_runlevel}
   end
 
   defp write_playlist(state) do

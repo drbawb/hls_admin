@@ -39,7 +39,6 @@ defmodule HlsAdmin.AdminUI do
   # enumerate: list the contents of the current file browser directory
   def handle_call(:enumerate, _from, state) do
     absolute_dir = util_absolute_dir(state)
-    Logger.debug "enumerating #{absolute_dir}"
 
     {:ok, ents} = File.ls(absolute_dir)
     ents = ents
