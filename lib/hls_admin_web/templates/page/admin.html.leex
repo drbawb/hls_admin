@@ -80,74 +80,49 @@
 
   <div class="fs-selection-stream">
     <h3>Stream Selection</h3>
-    <div>
-      <table>
-        <thead>
-          <th>select</th>
-          <th>codec</th>
-          <th>lang</th>
-        </thead>
-
-        <tbody>
-          <%= for track <- @opts_video do %>
-            <tr>
-              <td><%= radio_button f, :idx_v, track.idx %></td>
-              <td><%= track.name %></td>
-              <td><%= track.lang %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-
+    <div class="track-selector">
       <%= error_tag f, :idx_v %>
+
+      <div class="table">
+        <%= for track <- @opts_video do %>
+          <%= label do %>
+            <%= radio_button f, :idx_v, track.idx %>
+            <%= content_tag :span, [class: "col-small"], do: track.name %>
+            <%= content_tag :span, [class: "col-small"], do: track.lang %>
+            <%= content_tag :span, [class: "col-large"], do: "" %>
+          <% end %>
+        <% end %>
+      </div>
     </div>
 
-    <div>
-      <table>
-        <thead>
-          <th>select</th>
-          <th>codec</th>
-          <th>lang</th>
-          <th>title</th>
-        </thead>
-
-        <tbody>
-          <%= for track <- @opts_audio do %>
-            <tr>
-              <td><%= radio_button f, :idx_a, track.idx %></td>
-              <td><%= track.name %></td>
-              <td><%= track.lang %></td>
-              <td><%= track.title %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-
+    <div class="track-selector">
       <%= error_tag f, :idx_a %>
+
+      <div class="table">
+        <%= for track <- @opts_audio do %>
+          <%= label do %>
+            <%= radio_button f, :idx_a, track.idx %>
+            <%= content_tag :span, [class: "col-small"], do: track.name %>
+            <%= content_tag :span, [class: "col-small"], do: track.lang %>
+            <%= content_tag :span, [class: "col-large"], do: track.title %>
+          <% end %>
+        <% end %>
+      </div>
     </div>
 
-    <div>
-      <table>
-        <thead>
-          <th>select</th>
-          <th>codec</th>
-          <th>lang</th>
-          <th>title</th>
-        </thead>
-
-        <tbody>
-          <%= for track <- @opts_subs do %>
-            <tr>
-              <td><%= radio_button f, :idx_s, track.idx %></td>
-              <td><%= track.name %></td>
-              <td><%= track.lang %></td>
-              <td><%= track.title %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-
+    <div class="track-selector">
       <%= error_tag f, :idx_s %>
+
+      <div class="table">
+        <%= for track <- @opts_subs do %>
+          <%= label do %>
+            <%= radio_button f, :idx_s, track.idx %>
+            <%= content_tag :span, [class: "col-small"], do: track.name %>
+            <%= content_tag :span, [class: "col-small"], do: track.lang %>
+            <%= content_tag :span, [class: "col-large"], do: track.title %>
+          <% end %>
+        <% end %>
+      </div>
     </div>
   </div>
 

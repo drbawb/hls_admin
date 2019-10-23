@@ -49,6 +49,39 @@
 	justify-content: space-between;
 }
 
+.track-selector {
+	display: inline-block;
+	width: 320px;
+	height: 100px;
+	overflow-y: auto;
+	line-height: 1;
+
+	border: 1px solid;
+}
+
+.track-selector label {
+	display: grid;
+	grid-template-columns: 1fr 1fr 8fr;
+	width: 100%;
+	align-items: stretch;
+	border-bottom: 1px solid #ddd;
+}
+
+/* hide radio button */
+.track-selector label input {
+	display: none;
+}
+
+/* if radio button is checked higlight siblings */
+.track-selector label input:checked ~ span {
+	background: #9DA;
+}
+
+/* highlight whoe label when hovered */
+.track-selector label:hover {
+	background: #CEF;
+}
+
 .status-line.running::before  { background-color: #00ff00; }
 .status-line.stopping::before { background-color: #ffff00; }
 .status-line.stopped::before  { background-color: #ff0000; }
