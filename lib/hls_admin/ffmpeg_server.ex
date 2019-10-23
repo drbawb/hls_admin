@@ -285,6 +285,12 @@ defmodule HlsAdmin.FfmpegServer do
       "-map", "0:#{mux.idx_a}",
     ]
 
+    # TODO: -vf subtitles=<path>:si=<idx>
+    ffmpeg_st_args = case mux.st_path do
+      nil -> []
+      idx -> 
+        ["-vf", mux.st_path, mux.idx_s]
+    end
 
     ffmpeg_hls_args = [
       "-hls_list_size", "10",
@@ -294,7 +300,7 @@ defmodule HlsAdmin.FfmpegServer do
       seg_path
     ]
 
-    ffmpeg_args = ffmpeg_av_args ++ ffmpeg_hls_args
+    ffmpeg_args = ffmpeg_av_args ++ ffmepg_st_args ++ ffmpeg_hls_args
   end
 
   defp run_ffprobe(path) do
