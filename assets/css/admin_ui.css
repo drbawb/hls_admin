@@ -20,7 +20,7 @@
 }
 
 .fs-file {
-  margin: 25px 5px 25px 5px;
+  margin: 5px 10px 5px 10px;
   padding: 10px;
   border: 1px #000 solid;
 }
@@ -34,3 +34,21 @@
 .fs-chooser-body {
   font-size: .75em;
 }
+
+.status-line::before {
+	display: inline-block;
+	width: 10px; height: 10px;
+	margin-right: 5px;
+	border-radius: 10px;
+	content: '';
+}
+
+.server-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.status-line.running::before  { background-color: #00ff00; }
+.status-line.stopping::before { background-color: #ffff00; }
+.status-line.stopped::before  { background-color: #ff0000; }

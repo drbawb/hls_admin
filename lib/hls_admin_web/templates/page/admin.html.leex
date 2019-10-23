@@ -1,3 +1,8 @@
+<%= content_tag :details, open: @show_debug, phx_click: "show_debug" do %>
+  <summary>Debug Info</summary>
+  <%= inspect @changeset %>
+<% end %>
+
 <%= if @show_picker do %>
   <div class="modal">
     <div class="fs-picker-modal">
@@ -27,17 +32,20 @@
   </div>
 <% end %>
 
-<h2>Admin View</h2>
+<h2>Movie Night Admin View</h2>
 <h3>UI Process: <%= inspect @ui_pid %></h3>
 <hr>
 
-<div class="fs-selection">
+<%= f = form_for @changeset, "#", [phx_change: :validate, phx_submit: :save] %>
+  <%= hidden_input f, :av_path %>
+  <%= hidden_input f, :st_path %>
+
   <div class="fs-selection-file">
     <h3>File Selection</h3>
     <div class="fs-file">
       <div class="fs-chooser-heading">
         <h3>Video File</h3>
-        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_video" %>
+        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_video", type: "button" %>
       </div>
 
       <span class="fs-chooser-body">
@@ -47,12 +55,14 @@
           (No file selected.)
         <% end %>
       </span>
-    </div>
+
+      <%= error_tag f, :av_path %>
+    </div> <%# end file chooser %>
 
     <div class="fs-file">
       <div class="fs-chooser-heading">
         <h3>Subtitle File</h3>
-        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_subtitles" %>
+        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_subtitles", type: "button" %>
       </div>
 
       <span class="fs-chooser-body">
@@ -62,54 +72,111 @@
           (No file selected.)
         <% end %>
       </span>
+
+      <%= error_tag f, :st_path %>
     </div>
-  </div>
+  </div> <%# end file chooser %>
+
 
   <div class="fs-selection-stream">
     <h3>Stream Selection</h3>
-    <form phx-change="stream_validate" phx-submit="stream_save">
-      <label for="video_idx">Video stream</label>
-      <select name="video_idx">
-        <option value="" selected hidden>Choose One ...</option>
+    <div>
+      <table>
+        <thead>
+          <th>select</th>
+          <th>codec</th>
+          <th>lang</th>
+        </thead>
 
-        <%= for track <- @opts_video do %>
-          <%= content_tag :option, value: track.idx do %>
-            <span>[<%= track.name %>] [<%= track.lang %>]</span>
+        <tbody>
+          <%= for track <- @opts_video do %>
+            <tr>
+              <td><%= radio_button f, :idx_v, track.idx %></td>
+              <td><%= track.name %></td>
+              <td><%= track.lang %></td>
+            </tr>
           <% end %>
-        <% end %>
-      </select>
-      <br><br>
+        </tbody>
+      </table>
 
-      <label for="audio_idx">Audio stream</label>
-      <select name="audio_idx">
-        <option value="" selected hidden>Choose One ...</option>
+      <%= error_tag f, :idx_v %>
+    </div>
 
-        <%= for track <- @opts_audio do %>
-          <%= content_tag :option, value: track.idx do %>
-            <span>[<%= track.name %>] [<%= track.lang %>] - <%= track.title %></span>
+    <div>
+      <table>
+        <thead>
+          <th>select</th>
+          <th>codec</th>
+          <th>lang</th>
+          <th>title</th>
+        </thead>
+
+        <tbody>
+          <%= for track <- @opts_audio do %>
+            <tr>
+              <td><%= radio_button f, :idx_a, track.idx %></td>
+              <td><%= track.name %></td>
+              <td><%= track.lang %></td>
+              <td><%= track.title %></td>
+            </tr>
           <% end %>
-        <% end %>
-      </select>
-      <br><br>
+        </tbody>
+      </table>
 
-      <label for="subs_idx">Subtitles</label>
-      <select name="subs_idx">
-        <option value="" selected hidden>Choose One ...</option>
-        <option value="disabled">Disabled</option>
+      <%= error_tag f, :idx_a %>
+    </div>
 
-        <%= for track <- @opts_subs do %>
-          <%= content_tag :option, value: track.idx do %>
-            <span>[<%= track.name %>] [<%= track.lang %>] - <%= track.title %></span>
+    <div>
+      <table>
+        <thead>
+          <th>select</th>
+          <th>codec</th>
+          <th>lang</th>
+          <th>title</th>
+        </thead>
+
+        <tbody>
+          <%= for track <- @opts_subs do %>
+            <tr>
+              <td><%= radio_button f, :idx_s, track.idx %></td>
+              <td><%= track.name %></td>
+              <td><%= track.lang %></td>
+              <td><%= track.title %></td>
+            </tr>
           <% end %>
-        <% end %>
+        </tbody>
+      </table>
 
-      </select>
-      <br><br>
-
-      <%= submit "Start", class: "btn-primary" %>
-    </form>
-
-
-
+      <%= error_tag f, :idx_s %>
+    </div>
   </div>
-</div>
+
+
+
+  <div class="server-status">
+    <div class="server-heading">
+      <h3>Stream Status</h3>
+      <%= if @ffmpeg_status.runlevel == :running do %>
+        <%= submit "Stop", class: "btn-danger" %>
+      <% else %>
+        <%= submit "Start", class: "btn-primary", disabled: not @changeset.valid? %>
+      <% end %>
+
+    </div>
+
+    <div class="form-group">
+      <span>Runlevel:</span>
+      <%= print_status(@ffmpeg_status.runlevel) %>
+    </div>
+
+    <div class="form-group">
+      <span>Last update:</span>
+      <span><%= @ffmpeg_status.time %></span>
+    </div>
+
+    <div class="form-group">
+      <span>Streams Alive:</span>
+      <span><%= @ffmpeg_status.ffmpeg_procs_alive %></span>
+    </div>
+  </div>
+</form>

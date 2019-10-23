@@ -57,3 +57,18 @@ button:active, .btn:active {
   background-color: #007bff;
   color: #ffffff;
 }
+
+.form-group {
+	display: grid;
+	grid-template-columns: 2fr 10fr;
+  margin: 5px 0 5px 0;
+  
+}
+
+.help-block {
+  display: block;
+  color: #ff0000;
+  font-weight: bold;
+  font-style: italic;
+  font-size: .75em;
+}

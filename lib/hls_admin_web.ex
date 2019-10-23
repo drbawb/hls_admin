@@ -46,6 +46,7 @@ defmodule HlsAdminWeb do
 
       import HlsAdminWeb.ErrorHelpers
       import HlsAdminWeb.Gettext
+      import HlsAdminWeb.Output
       alias HlsAdminWeb.Router.Helpers, as: Routes
     end
   end
