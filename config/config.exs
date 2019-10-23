@@ -15,6 +15,9 @@ config :hls_admin, HlsAdmin.FfmpegServer,
   hls_root: "/srv/hls",
   playlist: "cdn00"
 
+# Configure server file browser process
+config :hls_admin, HlsAdmin.AdminUI,
+  parent_path: "/mnt/media"
 
 # Configures the endpoint
 config :hls_admin, HlsAdminWeb.Endpoint,

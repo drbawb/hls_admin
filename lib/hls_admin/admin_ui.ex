@@ -14,10 +14,12 @@ defmodule HlsAdmin.AdminUI do
   parent path.
   """
   
-  @initial_config %{parent_path: "/mnt/media", path_segments: []}
-
   def init(_state) do
-    {:ok, @initial_config}
+    config_block =
+      Application.fetch_env!(:hls_admin, HlsAdmin.AdminUI)
+      |> Enum.into(%{path_segments: []})
+
+    {:ok, config_block}
   end
 
   defp util_relative_dir(state) do
