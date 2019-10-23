@@ -56,6 +56,15 @@ defmodule HlsAdmin.AdminUI do
     {:reply, {:ok, ents}, state}
   end
 
+  def handle_call(:pop, _from, state) do
+    new_segments = case Enum.reverse(state.path_segments) do
+      [head | tail] -> Enum.reverse(tail)
+      [] -> []
+    end
+
+    {:reply, :ok, %{state | path_segments: new_segments}}
+  end
+
   def handle_call({:push, dir}, _from, state) when is_binary(dir) do
     Logger.debug "pushing #{dir} ..."
 
