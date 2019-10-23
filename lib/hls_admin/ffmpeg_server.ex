@@ -245,21 +245,20 @@ defmodule HlsAdmin.FfmpegServer do
     {:ok, file} = File.open(pl_path, [:write])
 
     # write header
-    :ok = IO.write(file, "HLS_ROOT/cdn00.m3u8")
-	  :ok = IO.write(file, "#EXTM3U")
-    :ok = IO.write(file, "#EXT-X-VERSION:3")
+	  :ok = IO.write(file, "#EXTM3U\n")
+    :ok = IO.write(file, "#EXT-X-VERSION:3\n")
 
     # level: src
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080")
-    :ok = IO.write(file, "cdn00_src/index.m3u8")
+	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "cdn00_src/index.m3u8\n")
 
     # level: mid
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1920x1080")
-    :ok = IO.write(file, "cdn00_mid/index.m3u8")
+	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "cdn00_mid/index.m3u8\n")
 
     # level: low
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=960000,RESOLUTION=1920x1080")
-    :ok = IO.write(file, "cdn00_low/index.m3u8")
+	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=960000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "cdn00_low/index.m3u8\n")
 
     File.close(file)
   end
