@@ -21,8 +21,8 @@ defmodule HlsAdmin.FfmpegServer do
   Returns `{:error, :stream_already_started}` if the stream is
   currently running.
   """
-  def start_stream(path) do
-    GenServer.call(__MODULE__, {:start, path})
+  def start_stream(stream_config) do
+    GenServer.call(__MODULE__, {:start, stream_config})
   end
 
   @doc """
@@ -71,16 +71,72 @@ defmodule HlsAdmin.FfmpegServer do
 
   def handle_call(:runlevel, _from, state), do: {:reply, state.runlevel, state}
 
-  def handle_call({:start, path}, _from, state = %{runlevel: :stopped}) do
-    {:reply, :ok, state}
+  def handle_call({:start, config}, _from, state = %{runlevel: :stopped}) do
+    alias HlsAdmin.FfmpegServer.ProfSetting
+
+    :ok = write_playlist(state)
+
+    # TODO: probably take this in as an arg
+    levels = [
+      %ProfSetting{level: "low", bitrate_audio: "64k", bitrate_video: "768k"},
+      %ProfSetting{level: "mid", bitrate_audio: "96k", bitrate_video: "2M"},
+      %ProfSetting{level: "src", bitrate_audio: "128k", bitrate_video: "4M"}
+    ]
+
+    pid_parent = self()
+    procs = for level <- levels do
+      args = build_ffmpeg_args(state, config, level)
+      opts = [out: :string, err: :string, in: :receive]
+      proc = Porcelain.spawn("ffmpeg", args, opts)
+
+      # wait for task to be done
+      awaiting_pid = spawn(fn ->
+        case Porcelain.Process.await(proc) do
+          {:ok, shell_resp} ->
+            send(pid_parent, {:done, self(), shell_resp})
+
+          {:error, :noproc} ->
+            send(pid_parent, {:done, self(), proc})
+        end
+      end)
+
+      {awaiting_pid, proc}
+    end
+
+    pid_wait_states =
+      procs
+      |> Enum.map(fn {awaiter, shell} -> {awaiter, {:running, shell}} end)
+      |> Map.new()
+
+    state =
+      state
+      |> Map.put(:pid_waits, pid_wait_states)
+      |> Map.put(:runlevel, :running)
+      |> Map.put(:config, %{mux: config, profiles: levels})
+
+    {:reply, {:ok, procs}, %{state | pid_waits: pid_wait_states}}
   end
 
   def handle_call({:start, path}, _from, state) do
     {:reply, {:error, :stream_already_started}, state}
   end
-    
+
   def handle_call(:stop, _from, state) do
-    {:reply, :ok, %{state | runlevel: :stopped}}
+    for {pid, proc} <- state.pid_waits do
+      case proc do
+        {:running, shell_pid} ->
+          # HACK: we have to send input to get `goon` to pump its
+          #       input loop and process the pending SIGTERM ...
+          Logger.warn "terminating #{inspect(shell_pid)}"
+          Porcelain.Process.signal(shell_pid, 15)
+          Porcelain.Process.send_input(shell_pid, "")
+
+        proc_status ->
+          Logger.warn "process in unexpected status: #{inspect proc_status}"
+      end
+    end
+
+    {:reply, :ok, state}
   end
 
   def handle_call({:probe, path}, _from, state) do
@@ -96,9 +152,72 @@ defmodule HlsAdmin.FfmpegServer do
     {:reply, probe, state}
   end
 
+  def handle_call(:force_stop, _from, state) do
+    %{state | runlevel: :stopped}
+  end
+
+  # await ffmpeg processes and clean up when they're done ...
+  def handle_info({:done, pid, proc}, state) do
+    new_state =
+      state
+      |> cleanup_waiting_pid(pid, proc)
+      |> update_runlevel()
+      |> cleanup_stopping()
+
+    {:noreply, new_state}
+  end
+
   #
   # Implementation
   #
+
+  defp cleanup_waiting_pid(state, pid, proc) do
+    status = Map.get(proc, :status, :killed)
+
+    new_waitlist =
+      state.pid_waits
+      |> Map.put(pid, {:exit, status})
+
+    %{state | pid_waits: new_waitlist}
+  end
+
+  defp cleanup_stopping(state = %{runlevel: :stopping}) do
+    Logger.debug "stopping ffmpeg server"
+    old_playlist = Path.join(state.root, "#{state.playlist}.m3u8")
+    {old_config, state} = Map.pop(state, :config)
+
+    Logger.debug "cleaning up master playlist: #{inspect old_playlist}"
+    File.rm(old_playlist)
+
+    for profile <- old_config.profiles do
+      profile_dir = Path.join(state.root, "#{state.playlist}_#{profile.level}")
+      Logger.debug "cleaning up profile dir: #{inspect profile_dir}"
+
+      files =
+        Path.join(profile_dir, "*.{ts,m3u8}")
+        |> Path.wildcard()
+        |> Enum.map(fn el -> File.rm(el) end)
+    end
+
+    %{state | runlevel: :stopped}
+  end
+
+  defp cleanup_stopping(state), do: state
+
+  defp update_runlevel(state) do
+    live_ents = for {_pid, {status, _}} <- state.pid_waits do
+      status == :running
+    end
+
+    num_running =
+      live_ents
+      |> Enum.filter(fn el -> el end)
+      |> Enum.count()
+
+    new_runlevel = if num_running > 0, do: :running, else: :stopping
+
+    %{state | runlevel: new_runlevel}
+  end
 
   defp write_playlist(state) do
     pl_path = Path.join(state.root, "#{state.playlist}.m3u8")
@@ -124,8 +243,8 @@ defmodule HlsAdmin.FfmpegServer do
     File.close(file)
   end
 
-  defp start_ffmpeg_proc(state, mux, prof) do
-    level_name = "#{state.playlist}_#{prof.level_name}"
+  defp build_ffmpeg_args(state, mux, prof) do
+    level_name = "#{state.playlist}_#{prof.level}"
     seg_path = Path.join([state.root, level_name, "index.m3u8"])
     seg_name = Path.join([state.root, level_name, "%03d.ts"])
 
@@ -140,10 +259,10 @@ defmodule HlsAdmin.FfmpegServer do
       "-profile:v", "main",
       "-r", "30",
       "-b:a", prof.bitrate_audio,
-      "-c:a", "libfdk_aac",
+      "-c:a", "aac",
       "-preset", "veryfast",
-      "-map", "v:#{mux.idx_v}",
-      "-map", "a:#{mux.idx_a}",
+      "-map", "0:#{mux.idx_v}",
+      "-map", "0:#{mux.idx_a}",
     ]
 
 
@@ -156,7 +275,6 @@ defmodule HlsAdmin.FfmpegServer do
     ]
 
     ffmpeg_args = ffmpeg_av_args ++ ffmpeg_hls_args
-    Logger.info "#{inspect ffmpeg_args}"
   end
 
   defp run_ffprobe(path) do
@@ -176,6 +294,9 @@ defmodule HlsAdmin.FfmpegServer do
     streams =
       Enum.map(result["streams"], &_parse_stream/1)
       |> Enum.reject(fn el -> is_nil(el) end)
+      |> Enum.group_by(
+        fn [tag,_] -> tag end,
+        fn [_,streams] -> streams end)
 
     {:ok, streams}
   end
@@ -192,7 +313,6 @@ defmodule HlsAdmin.FfmpegServer do
 
     end
   end
-
 
   defp _parse_audio(stream) do
     codec_name = stream["codec_name"]
