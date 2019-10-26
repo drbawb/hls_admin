@@ -54,7 +54,7 @@ defmodule HlsAdminWeb.AdminView do
 
     # next load *just* subtitle streams
     socket = case socket.assigns.current_subs do
-      nil -> socket
+      nil -> assign(socket, :opts_subs, [])
       path ->
         {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
         Logger.debug "subs resp: #{inspect probe_resp}"
