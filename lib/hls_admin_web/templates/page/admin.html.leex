@@ -61,8 +61,11 @@
 
     <div class="fs-file">
       <div class="fs-chooser-heading">
-        <h3>Subtitle File</h3>
-        <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_subtitles", type: "button" %>
+        <h3>Subtitle File <em>(Optional)</em></h3>
+        <div class="button-group">
+          <%= content_tag :button, "Browse", class: "btn-primary", phx_click: "choose_subtitles", type: "button" %>
+          <%= content_tag :button, "Clear", class: "btn-warning", phx_click: "clear_subtitles", type: "button" %>
+        </div>
       </div>
 
       <span class="fs-chooser-body">

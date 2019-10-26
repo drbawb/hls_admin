@@ -125,6 +125,22 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  def handle_event("clear_subtitles", _params, socket) do
+
+    changeset =
+        socket.assigns.changeset
+        |> Map.put(:errors, [])
+        |> StreamForm.changeset(%{st_path: nil})
+        |> Map.put(:action, :insert)
+
+    socket =
+      socket
+      |> assign(:changeset, changeset)
+      |> assign(:current_subs, nil)
+
+    {:noreply, fetch(socket)}
+  end
+
   def handle_event("push", %{"path" => path}, socket) do
     # push path onto stack
     Logger.info "got add event: #{inspect path}"

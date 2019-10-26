@@ -47,6 +47,7 @@ button, .btn {
   border: none;
   border-radius: 5px;
   font-size: 1em;
+  margin: 0 5px 0 5px;
 }
 
 button:active, .btn:active {
