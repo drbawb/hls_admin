@@ -76,8 +76,8 @@ defmodule HlsAdmin.FfmpegServer do
   end
 
   def handle_call(:status, _from, state) do
-    {:ok, server_time} = 
-      Timex.local 
+    {:ok, server_time} =
+      Timex.local
       |> Timex.format("{YYYY}-{0M}-{0D} {0h12}:{0m}:{0s} {AM}")
 
     status_block = %{
@@ -245,19 +245,19 @@ defmodule HlsAdmin.FfmpegServer do
     {:ok, file} = File.open(pl_path, [:write])
 
     # write header
-	  :ok = IO.write(file, "#EXTM3U\n")
+    :ok = IO.write(file, "#EXTM3U\n")
     :ok = IO.write(file, "#EXT-X-VERSION:3\n")
 
     # level: src
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080\n")
     :ok = IO.write(file, "cdn00_src/index.m3u8\n")
 
     # level: mid
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1920x1080\n")
     :ok = IO.write(file, "cdn00_mid/index.m3u8\n")
 
     # level: low
-	  :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=960000,RESOLUTION=1920x1080\n")
+    :ok = IO.write(file, "#EXT-X-STREAM-INF:BANDWIDTH=960000,RESOLUTION=1920x1080\n")
     :ok = IO.write(file, "cdn00_low/index.m3u8\n")
 
     File.close(file)
@@ -274,33 +274,33 @@ defmodule HlsAdmin.FfmpegServer do
       "-i", mux.av_path,
       "-b:v", prof.bitrate_video,
       "-c:v", "libx264",
-      "-x264opts", "keyint=300:no-scenecut",
+      "-x264opts", "keyint=180:no-scenecut",
       "-pix_fmt" ,"yuv420p",
       "-profile:v", "main",
       "-r", "30",
       "-b:a", prof.bitrate_audio,
       "-c:a", "aac",
       "-preset", "veryfast",
-      "-map", "0:#{mux.idx_v}",
-      "-map", "0:#{mux.idx_a}",
+      "-map", "0:v:#{mux.idx_v}",
+      "-map", "0:a:#{mux.idx_a}",
     ]
 
     # TODO: -vf subtitles=<path>:si=<idx>
-    ffmpeg_st_args = case mux.st_path do
-      nil -> []
-      idx -> 
-        ["-vf", mux.st_path, mux.idx_s]
+    ffmpeg_st_args = if (not is_nil(mux.st_path)) and (not is_nil(mux.idx_s)) do
+      ["-vf", "subtitles=#{mux.st_path}:si=#{mux.idx_s}"]
+    else
+      []
     end
 
     ffmpeg_hls_args = [
       "-hls_list_size", "10",
-      "-hls_time", "10",
+      "-hls_time", "6",
       "-hls_flags", "delete_segments",
       "-hls_segment_filename", seg_name,
       seg_path
     ]
 
-    ffmpeg_args = ffmpeg_av_args ++ ffmepg_st_args ++ ffmpeg_hls_args
+    ffmpeg_args = ffmpeg_av_args ++ ffmpeg_st_args ++ ffmpeg_hls_args
   end
 
   defp run_ffprobe(path) do
@@ -323,7 +323,17 @@ defmodule HlsAdmin.FfmpegServer do
       |> Enum.group_by(
         fn [tag,_] -> tag end,
         fn [_,streams] -> streams end)
+      |> Enum.map(fn {ty, streams} ->
+        reindexed_streams =
+          streams
+          |> Stream.with_index()
+          |> Stream.map(fn {el,idx} -> %{el | idx: idx} end)
+          |> Enum.to_list()
 
+        {ty, reindexed_streams}
+      end)
+
+    Logger.info "streams :: #{inspect streams}"
     {:ok, streams}
   end
 
