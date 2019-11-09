@@ -104,18 +104,20 @@ defmodule HlsAdmin.FfmpegServer do
     pid_parent = self()
     procs = for level <- levels do
       args = build_ffmpeg_args(state, config, level)
-      opts = [out: :string, err: :string, in: :receive]
-      proc = Porcelain.spawn("ffmpeg", args, opts)
+      {:ok, proc} = Lacca.start("ffmpeg", args)
 
       # wait for task to be done
+      #
+      # loop until it's not alive and then inform the
+      # server that the awaiter task (self()) and process (proc)
+      # have died...
+      #
       awaiting_pid = spawn(fn ->
-        case Porcelain.Process.await(proc) do
-          {:ok, shell_resp} ->
-            send(pid_parent, {:done, self(), shell_resp})
+        Logger.info "waiting from pid #{inspect self()}"
+        loop_waiting_for_death(proc)
 
-          {:error, :noproc} ->
-            send(pid_parent, {:done, self(), proc})
-        end
+        Logger.info "done waiting from pid #{inspect self()}"
+        send(pid_parent, {:done, self(), proc})
       end)
 
       {awaiting_pid, proc}
@@ -148,8 +150,7 @@ defmodule HlsAdmin.FfmpegServer do
           # HACK: we have to send input to get `goon` to pump its
           #       input loop and process the pending SIGTERM ...
           Logger.warn "terminating #{inspect(shell_pid)}"
-          Porcelain.Process.signal(shell_pid, 15)
-          Porcelain.Process.send_input(shell_pid, "")
+          Lacca.kill(shell_pid)
 
         proc_status ->
           Logger.warn "process in unexpected status: #{inspect proc_status}"
@@ -183,40 +184,49 @@ defmodule HlsAdmin.FfmpegServer do
     {:noreply, new_state}
   end
 
+  def handle_info(:cleanup_complete, state) do
+    {:noreply, %{state | runlevel: :stopped}}
+  end
+
   #
   # Implementation
   #
 
   defp cleanup_waiting_pid(state, pid, proc) do
-    status = Map.get(proc, :status, :killed)
-
     new_waitlist =
       state.pid_waits
-      |> Map.put(pid, {:exit, status})
+      |> Map.put(pid, {:exit, proc})
 
     %{state | pid_waits: new_waitlist}
   end
 
   defp cleanup_stopping(state = %{runlevel: :stopping}) do
-    Logger.debug "stopping ffmpeg server"
-    old_playlist = Path.join(state.root, "#{state.playlist}.m3u8")
-    {old_config, state} = Map.pop(state, :config)
+    genserver_pid = self()
+    spawn(fn ->
+      Logger.info "stopping ffmpeg server in 30 seconds"
+      :timer.sleep(30_000)
 
-    Logger.debug "cleaning up master playlist: #{inspect old_playlist}"
-    File.rm(old_playlist)
+      old_playlist = Path.join(state.root, "#{state.playlist}.m3u8")
+      {old_config, state} = Map.pop(state, :config)
 
-    for profile <- old_config.profiles do
-      profile_dir = Path.join(state.root, "#{state.playlist}_#{profile.level}")
-      Logger.debug "cleaning up profile dir: #{inspect profile_dir}"
+      Logger.debug "cleaning up master playlist: #{inspect old_playlist}"
+      File.rm(old_playlist)
 
-      files =
-        Path.join(profile_dir, "*.{ts,m3u8}")
-        |> Path.wildcard()
-        |> Enum.map(fn el -> File.rm(el) end)
-    end
+      for profile <- old_config.profiles do
+        profile_dir = Path.join(state.root, "#{state.playlist}_#{profile.level}")
+        Logger.debug "cleaning up profile dir: #{inspect profile_dir}"
 
-    Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, :stopped}
-    %{state | runlevel: :stopped}
+        files =
+          Path.join(profile_dir, "*.{ts,m3u8}")
+          |> Path.wildcard()
+          |> Enum.map(fn el -> File.rm(el) end)
+      end
+
+      Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, :stopped}
+      send(genserver_pid, :cleanup_complete)
+      end)
+
+    state # just return the state; will update later in handle_info()
   end
 
   defp cleanup_stopping(state), do: state
@@ -391,4 +401,16 @@ defmodule HlsAdmin.FfmpegServer do
     }]
   end
 
+  defp loop_waiting_for_death(child_pid) 
+    when is_nil(child_pid), do: :ok
+
+  defp loop_waiting_for_death(child_pid) do
+    child_pid = case Lacca.alive?(child_pid) do
+      true  -> child_pid
+      false -> nil
+    end
+
+    :timer.sleep(100)
+    loop_waiting_for_death(child_pid)
+  end
 end
