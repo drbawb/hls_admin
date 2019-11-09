@@ -65,6 +65,8 @@ defmodule HlsAdmin.FfmpegServer do
 
     {:ok, %{
       runlevel: :stopped,
+      is_killed: false,
+
       root: config_block[:hls_root],
       playlist: config_block[:playlist],
       pid_waits: [],
@@ -157,7 +159,7 @@ defmodule HlsAdmin.FfmpegServer do
       end
     end
 
-    {:reply, :ok, state}
+    {:reply, :ok, %{state | is_killed: true}}
   end
 
   def handle_call({:probe, path}, _from, state) do
@@ -184,8 +186,9 @@ defmodule HlsAdmin.FfmpegServer do
     {:noreply, new_state}
   end
 
+  # reinit state after we've cleaned up ffmpeg procs
   def handle_info(:cleanup_complete, state) do
-    {:noreply, %{state | runlevel: :stopped}}
+    {:noreply, %{state | runlevel: :stopped, is_killed: false}}
   end
 
   #
@@ -203,8 +206,12 @@ defmodule HlsAdmin.FfmpegServer do
   defp cleanup_stopping(state = %{runlevel: :stopping}) do
     genserver_pid = self()
     spawn(fn ->
-      Logger.info "stopping ffmpeg server in 30 seconds"
-      :timer.sleep(30_000)
+      if state.is_killed do
+        Logger.info "stopping ffmpeg server immediately ..."
+      else
+        Logger.info "stopping ffmpeg server in 30 seconds"
+        :timer.sleep(30_000)
+      end
 
       old_playlist = Path.join(state.root, "#{state.playlist}.m3u8")
       {old_config, state} = Map.pop(state, :config)
@@ -224,7 +231,7 @@ defmodule HlsAdmin.FfmpegServer do
 
       Phoenix.PubSub.broadcast HlsAdmin.PubSub, "ffmpeg:status_change", {:ffmpeg, :stopped}
       send(genserver_pid, :cleanup_complete)
-      end)
+    end)
 
     state # just return the state; will update later in handle_info()
   end
