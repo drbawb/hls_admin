@@ -304,7 +304,7 @@ defmodule HlsAdmin.FfmpegServer do
 
     # TODO: -vf subtitles=<path>:si=<idx>
     ffmpeg_st_args = if (not is_nil(mux.st_path)) and (not is_nil(mux.idx_s)) do
-      ["-vf", "subtitles=#{mux.st_path}:si=#{mux.idx_s}"]
+      ["-vf", "subtitles=#{escape_filtergraph(mux.st_path)}:si=#{mux.idx_s}"]
     else
       []
     end
@@ -318,6 +318,18 @@ defmodule HlsAdmin.FfmpegServer do
     ]
 
     ffmpeg_args = ffmpeg_av_args ++ ffmpeg_st_args ++ ffmpeg_hls_args
+  end
+
+  defp escape_filtergraph(fg_arg) do
+    fg_arg
+    |> String.replace("\\", "\\\\")
+    |> String.replace("'", "\\'")
+    |> String.replace(":", "\\:")
+    |> String.replace("[", "\\[")
+    |> String.replace("]", "\\]")
+    |> String.replace(",", "\\,")
+    |> String.replace(";", "\\;")
+
   end
 
   defp run_ffprobe(path) do
