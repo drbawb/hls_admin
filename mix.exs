@@ -45,7 +45,8 @@ defmodule HlsAdmin.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:lacca, "~> 0.1"},
-      {:timex, "~> 3.0"}
+      {:timex, "~> 3.0"},
+      {:argon2_elixir, "~> 2.0"},
     ]
   end
 

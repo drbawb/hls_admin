@@ -17,7 +17,11 @@ defmodule HlsAdminWeb.Router do
   scope "/", HlsAdminWeb do
     pipe_through :browser
 
-    live "/", AdminView
+    # admin authorization controller
+    get  "/",       AuthController, :index
+    get  "/login",  AuthController, :new
+    get  "/logout", AuthController, :delete
+    post "/create", AuthController, :create
   end
 
   # Other scopes may use custom stacks.
