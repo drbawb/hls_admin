@@ -58,23 +58,29 @@ defmodule HlsAdmin.FfmpegServer do
   # Callbacks
   #
 
-  def init(_state) do
-    config_block = Application.fetch_env!(:hls_admin, HlsAdmin.FfmpegServer)
-    Logger.info "Starting FFMPEG server process: #{inspect config_block}"
+  @impl true
+  def init(opts \\ []) when is_list(opts) do
+    hls_root = Keyword.pop(opts, :hls_root)
+    playlist = Keyword.pop(opts, :playlist)
 
+    if is_nil(hls_root) do
+      raise ArgumentError, "FfmpegServer requires a working directory, but `:hls_root` was nil."
+    end
+
+    if is_nil(playlist) do
+      raise ArgumentError, "FfmpegServer requires a playlist prefix, but `:playlist` was nil."
+    end
+
+    Logger.info "Starting FFMPEG server process w/ configuration: #{inspect opts}"
 
     {:ok, %{
       runlevel: :stopped,
       is_killed: false,
 
-      root: config_block[:hls_root],
-      playlist: config_block[:playlist],
+      root: hls_root,
+      playlist: playlist,
       pid_waits: [],
     }}
-  end
-
-  def start_link(default) do
-    GenServer.start_link(__MODULE__, default, name: __MODULE__)
   end
 
   def handle_call(:status, _from, state) do
