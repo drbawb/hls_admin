@@ -13,21 +13,71 @@ defmodule HlsAdmin.FfmpegServer do
   #
 
   @doc """
+  Starts the stream coordination server process w/ the same name
+  as this module. `opts` should be a keyword list containing initialization
+  parameters for the stream server process.
+
+  The following parameters are supported:
+
+  - `{:hls_root, Path.t()}`: the location where HLS segments & playlists
+    will be output by the child FFmpeg processes.
+
+  - `{:playlist, String.t()}`: a prefix which is prepended to the names
+    of playlists associated with this stream.
+
+  While the server is in the `:running` state it will create the following
+  file structure in the path specified at `:hls_root`:
+
+  - `<playlist>.m3u8`: master playlist containing stream definitions for
+    three quality levels: `src`, `mid`, and `low`.
+
+  - `<playlist>_<level>/`: sub-directories containing current playlists and
+    MPEG-TS segments for each quality level.
+  """
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  @doc """
   Begins a transcoding job if one is not already running.
   This will transition the server into the `:running` state.
+
+  Note that the server will overwrite existing playlists and directories
+  matching the configured `:hls_root` and `:playlist` settings. See the
+  documentaitn for `start_link/1` for additional details on the files &
+  folders which will be managed by this process upon starting a stream.
+
+  If the stream is allowed to run to completion the server will enter a
+  special `:stopping` state and wait approximately 30 before running any
+  clean-up handlers. This gives clients a chance to catch-up on downloading
+  files for the "final playlist". See `stop_stream/0` for details on what
+  happens once this timeout has elapsed.
+
+  The `stream_config` parameter must be of the type `FfmpegServer.MuxSetting`.
+  This parameter directs the stream server to a media file, an optional
+  subtitle file, and (in the case of multiple tracks) selects an audio,
+  video, and subtitle stream to use.
 
   ## Errors
 
   Returns `{:error, :stream_already_started}` if the stream is
-  currently running.
+  currently running. The previously running stream will remain
+  running until it is stopped or the `FfmpegServer` process is killed.
   """
   def start_stream(stream_config) do
     GenServer.call(__MODULE__, {:start, stream_config})
   end
 
   @doc """
-  Stops the currently running transcoding job(s).
-  NOTE: This is a no-op if the server is already in the `:stopped` state.
+  Stops the currently running transcoding job(s). Any FFmpeg processes
+  associated with the stream will be killed, and their associated playlists
+  and MPEG-TS files will immediately be removed from the `:hls_root` directory.
+
+  After this method has returned the server will have transitioned to the
+  `:stopped` state -- at this time it will be ready to accept new transcoding
+  jobs via the `start_stream/1` function.
+
+  _Note: This is a no-op if the server is already in the `:stopped` state._
   """
   def stop_stream() do
     GenServer.call(__MODULE__, :stop)
@@ -38,12 +88,28 @@ defmodule HlsAdmin.FfmpegServer do
   provided media located at `path`. This information can be used to construct
   the necessary arguments to run a transcoding job via `start_stream(...)`
   for that particular path.
+
+  This is useful for extracting information from media files in order to build
+  the `stream_config` parameter needed to call `start_stream/1`.
   """
   def probe_stream(path) do
     GenServer.call(__MODULE__, {:probe, path})
   end
 
-  @doc "Returns the current server runlevel, one of: `:running | :stopping | :stopped`."
+  @doc """
+  Returns the current server runlevel, which is one of the following
+  values based on previously called functions:
+
+  - `:running`: The server is actively creating the HLS streams in the
+    configured playlist directory.
+
+  - `:stopping`: The server has run out of input, all transcoding jobs
+    have finished, and the server is momentarily paused before cleaning
+    up the HLS playlist directory.
+
+  - `:stopped`: If the server has been started previously: the playlist
+    directory has been cleaned up and all transcoding jobs have been stopped.
+  """
   def runlevel() do
     GenServer.call(__MODULE__, :runlevel)
   end
@@ -83,6 +149,7 @@ defmodule HlsAdmin.FfmpegServer do
     }}
   end
 
+  @impl true
   def handle_call(:status, _from, state) do
     {:ok, server_time} =
       Timex.local
@@ -97,6 +164,7 @@ defmodule HlsAdmin.FfmpegServer do
     {:reply, status_block, state}
   end
 
+  @impl true
   def handle_call({:start, config}, _from, state = %{runlevel: :stopped}) do
     alias HlsAdmin.FfmpegServer.ProfSetting
 
@@ -147,10 +215,12 @@ defmodule HlsAdmin.FfmpegServer do
     {:reply, {:ok, procs}, %{state | pid_waits: pid_wait_states}}
   end
 
+  @impl true
   def handle_call({:start, path}, _from, state) do
     {:reply, {:error, :stream_already_started}, state}
   end
 
+  @impl true
   def handle_call(:stop, _from, state) do
     for {pid, proc} <- state.pid_waits do
       case proc do
@@ -168,6 +238,7 @@ defmodule HlsAdmin.FfmpegServer do
     {:reply, :ok, %{state | is_killed: true}}
   end
 
+  @impl true
   def handle_call({:probe, path}, _from, state) do
     probe = with {:ok, ffprobe_json} <- run_ffprobe(path),
                  {:ok, ffprobe_body} <- Jason.decode(ffprobe_json),
@@ -181,8 +252,10 @@ defmodule HlsAdmin.FfmpegServer do
     {:reply, probe, state}
   end
 
-  # await ffmpeg processes and clean up when they're done ...
+  @impl true
   def handle_info({:done, pid, proc}, state) do
+    # sent ~30s after all ffmpeg processes have died of natural causes
+
     new_state =
       state
       |> cleanup_waiting_pid(pid, proc)
@@ -192,13 +265,14 @@ defmodule HlsAdmin.FfmpegServer do
     {:noreply, new_state}
   end
 
-  # reinit state after we've cleaned up ffmpeg procs
+  @impl true
   def handle_info(:cleanup_complete, state) do
+    # reinit state after we've cleaned up the dead ffmpeg procs
     {:noreply, %{state | runlevel: :stopped, is_killed: false}}
   end
 
   #
-  # Implementation
+  # Implementation Details
   #
 
   defp cleanup_waiting_pid(state, pid, proc) do
@@ -426,7 +500,7 @@ defmodule HlsAdmin.FfmpegServer do
     }]
   end
 
-  defp loop_waiting_for_death(child_pid) 
+  defp loop_waiting_for_death(child_pid)
     when is_nil(child_pid), do: :ok
 
   defp loop_waiting_for_death(child_pid) do
