@@ -126,8 +126,8 @@ defmodule HlsAdmin.FfmpegServer do
 
   @impl true
   def init(opts \\ []) when is_list(opts) do
-    hls_root = Keyword.pop(opts, :hls_root)
-    playlist = Keyword.pop(opts, :playlist)
+    hls_root = opts[:hls_root]
+    playlist = opts[:playlist]
 
     if is_nil(hls_root) do
       raise ArgumentError, "FfmpegServer requires a working directory, but `:hls_root` was nil."
