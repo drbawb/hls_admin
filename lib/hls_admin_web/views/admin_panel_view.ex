@@ -5,65 +5,11 @@ defmodule HlsAdminWeb.AdminView do
   alias HlsAdminWeb.PageView
   require Logger
 
-  def handle_info(:poll_ffmpeg, socket) do
-    # Process.send_after(self(), :poll_ffmpeg, 1000)
-    status = HlsAdmin.FfmpegServer.status()
-    socket =
-      socket
-      |> assign(:ffmpeg_status, status)
+  #
+  # Callbacks
+  #
 
-    {:noreply, socket}
-  end
-
-
-  defp fetch(socket) do
-    ui_pid = socket.assigns.ui_pid
-    {:ok, ents} = GenServer.call(ui_pid, :enumerate)
-    {:ok, cwd}  = GenServer.call(ui_pid, :cwd)
-
-    # group dirents by type
-    ents = ents |> Enum.group_by(
-      fn {ty, _}  -> ty end,
-      fn {_, val} -> val end
-    )
-
-    # reload ffmpeg status optimistically 
-    status = HlsAdmin.FfmpegServer.status()
-
-    # push new states to client
-    socket
-    |> assign(:cwd, cwd)
-    |> assign(:dirs, ents[:dir] || [])
-    |> assign(:files, ents[:file] || [])
-    |> assign(:ffmpeg_status, status)
-    |> load_streams()
-  end
-
-  defp load_streams(socket) do
-    # first load all streams from the video (if avail)
-    socket = case socket.assigns.current_video do
-      nil  -> socket
-      path ->
-        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
-        Logger.debug "video resp: #{inspect probe_resp}"
-
-        socket
-        |> assign(:opts_video, probe_resp[:video] || [])
-        |> assign(:opts_audio, probe_resp[:audio] || [])
-    end
-
-    # next load *just* subtitle streams
-    socket = case socket.assigns.current_subs do
-      nil -> assign(socket, :opts_subs, [])
-      path ->
-        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
-        Logger.debug "subs resp: #{inspect probe_resp}"
-
-        socket
-        |> assign(:opts_subs, probe_resp[:subtitle] || [])
-    end
-  end
-
+  @impl true
   def mount(_session, socket) do
     {:ok, ui_pid} = GenServer.start_link(HlsAdmin.AdminUI, [])
     status = HlsAdmin.FfmpegServer.status()
@@ -71,7 +17,7 @@ defmodule HlsAdminWeb.AdminView do
 
     Phoenix.PubSub.subscribe HlsAdmin.PubSub, "ffmpeg:status_change"
 
-    socket = 
+    socket =
       socket
       |> assign(:changeset, changeset)
       |> assign(:show_debug, false)
@@ -95,8 +41,10 @@ defmodule HlsAdminWeb.AdminView do
     PageView.render("admin.html", assigns)
   end
 
-  # hide file picker and clear mode
-  def handle_event("choose_close", params, socket) do
+  @impl true
+  def handle_event("choose_close", _params, socket) do
+    # hide file picker and clear mode
+
     socket =
       socket
       |> assign(:picker_mode, nil)
@@ -105,9 +53,11 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
-  # show file picker in video mode
+  @impl true
   def handle_event("choose_video", _params, socket) do
-    socket = 
+    # show file picker in video mode
+
+    socket =
       socket
       |> assign(:picker_mode, "video")
       |> assign(:show_picker, true)
@@ -115,9 +65,11 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
-  # show file picker in subtitle mode
+  @impl true
   def handle_event("choose_subtitles", _params, socket) do
-    socket = 
+    # show file picker in subtitle mode
+
+    socket =
       socket
       |> assign(:picker_mode, "subtitles")
       |> assign(:show_picker, true)
@@ -125,7 +77,9 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("clear_subtitles", _params, socket) do
+    # deselect currently selected subtitle file
 
     changeset =
         socket.assigns.changeset
@@ -141,6 +95,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("push", %{"path" => path}, socket) do
     # push path onto stack
     Logger.info "got add event: #{inspect path}"
@@ -151,6 +106,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("pop", _params, socket) do
     Logger.info "got pop event"
     ui_pid = socket.assigns.ui_pid
@@ -158,6 +114,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("choose", %{"path" => path}, socket) do
     ui_pid = socket.assigns.ui_pid
     {:ok, cwd} = GenServer.call(ui_pid, :cwd)
@@ -171,7 +128,7 @@ defmodule HlsAdminWeb.AdminView do
       "subtitles" -> :current_subs
     end
 
-    # TODO: update changeset. (this should really be all we have to do, get 
+    # TODO: update changeset. (this should really be all we have to do, get
     # rid of above block which duplicates this ...
     changeset = case socket.assigns.picker_mode do
       "video" ->
@@ -179,7 +136,7 @@ defmodule HlsAdminWeb.AdminView do
         |> Map.put(:errors, [])
         |> StreamForm.changeset(%{av_path: full_path})
         |> Map.put(:action, :insert)
-        
+
 
       "subtitles" ->
         socket.assigns.changeset
@@ -199,6 +156,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("validate", params, socket) do
     Logger.debug "validate :: #{inspect(params)}"
 
@@ -210,6 +168,7 @@ defmodule HlsAdminWeb.AdminView do
     {:noreply, fetch(socket)}
   end
 
+  @impl true
   def handle_event("save", params, socket) do
     Logger.debug "save :: #{inspect(params)}"
 
@@ -223,6 +182,33 @@ defmodule HlsAdminWeb.AdminView do
 
   end
 
+  @impl true
+  def handle_event("show_debug", params, socket) do
+    {:noreply, assign(socket, :show_debug, not socket.assigns.show_debug)}
+  end
+
+  @impl true
+  def handle_info(:poll_ffmpeg, socket) do
+    # Process.send_after(self(), :poll_ffmpeg, 1000)
+    status = HlsAdmin.FfmpegServer.status()
+    socket =
+      socket
+      |> assign(:ffmpeg_status, status)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:ffmpeg, status}, socket) do
+    Logger.info "status update: #{status}"
+    {:noreply, fetch(socket)}
+  end
+
+  #
+  # Implementation Details
+  #
+
+  # called by (valid) form to actually start the HLS stream
   defp _start_stream(socket, %{"stream_form" => stream_form}) do
     Logger.info "starting stream"
 
@@ -245,18 +231,65 @@ defmodule HlsAdminWeb.AdminView do
     end
   end
 
-  defp _stop_stream(socket, params) do
+  # called to stop a currently running HLS stream
+  defp _stop_stream(socket, _params) do
     Logger.info "stopping stream"
     HlsAdmin.FfmpegServer.stop_stream()
     {:noreply, fetch(socket)}
   end
 
-  def handle_event("show_debug", params, socket) do
-    {:noreply, assign(socket, :show_debug, not socket.assigns.show_debug)}
+  # Refresh the socket state w/ latest backing process state.
+  # This includes data from the admin file browser UI process
+  # as well as the FfmpegStream server.
+  defp fetch(socket) do
+    ui_pid = socket.assigns.ui_pid
+    {:ok, ents} = GenServer.call(ui_pid, :enumerate)
+    {:ok, cwd}  = GenServer.call(ui_pid, :cwd)
+
+    # group dirents by type
+    ents = ents |> Enum.group_by(
+      fn {ty, _}  -> ty end,
+      fn {_, val} -> val end
+    )
+
+    # reload ffmpeg status optimistically
+    status = HlsAdmin.FfmpegServer.status()
+
+    # push new states to client
+    socket
+    |> assign(:cwd, cwd)
+    |> assign(:dirs, ents[:dir] || [])
+    |> assign(:files, ents[:file] || [])
+    |> assign(:ffmpeg_status, status)
+    |> load_streams()
   end
 
-  def handle_info({:ffmpeg, status}, socket) do
-    Logger.info "status update: #{status}"
-    {:noreply, fetch(socket)}
+  # Called to get detailed stream information suitable for display
+  # inside the configuration form component.
+  defp load_streams(socket) do
+    # first load all streams from the video (if avail)
+    socket = case socket.assigns.current_video do
+      nil  -> socket
+      path ->
+        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
+        Logger.debug "video resp: #{inspect probe_resp}"
+
+        socket
+        |> assign(:opts_video, probe_resp[:video] || [])
+        |> assign(:opts_audio, probe_resp[:audio] || [])
+    end
+
+    # next load *just* subtitle streams
+    case socket.assigns.current_subs do
+      nil ->
+        assign(socket, :opts_subs, [])
+
+      path ->
+        {:ok, probe_resp} = HlsAdmin.FfmpegServer.probe_stream(path)
+        Logger.debug "subs resp: #{inspect probe_resp}"
+
+        socket
+        |> assign(:opts_subs, probe_resp[:subtitle] || [])
+    end
   end
 end

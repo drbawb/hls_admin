@@ -59,7 +59,7 @@ defmodule HlsAdmin.AdminUI do
 
   def handle_call(:pop, _from, state) do
     new_segments = case Enum.reverse(state.path_segments) do
-      [head | tail] -> Enum.reverse(tail)
+      [_head | tail] -> Enum.reverse(tail)
       [] -> []
     end
 

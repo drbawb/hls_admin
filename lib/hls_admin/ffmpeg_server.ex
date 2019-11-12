@@ -216,13 +216,13 @@ defmodule HlsAdmin.FfmpegServer do
   end
 
   @impl true
-  def handle_call({:start, path}, _from, state) do
+  def handle_call({:start, _path}, _from, state) do
     {:reply, {:error, :stream_already_started}, state}
   end
 
   @impl true
   def handle_call(:stop, _from, state) do
-    for {pid, proc} <- state.pid_waits do
+    for {_await_pid, proc} <- state.pid_waits do
       case proc do
         {:running, shell_pid} ->
           # HACK: we have to send input to get `goon` to pump its
@@ -303,7 +303,7 @@ defmodule HlsAdmin.FfmpegServer do
         profile_dir = Path.join(state.root, "#{state.playlist}_#{profile.level}")
         Logger.debug "cleaning up profile dir: #{inspect profile_dir}"
 
-        files =
+        _removed_files =
           Path.join(profile_dir, "*.{ts,m3u8}")
           |> Path.wildcard()
           |> Enum.map(fn el -> File.rm(el) end)
@@ -331,10 +331,9 @@ defmodule HlsAdmin.FfmpegServer do
       status == :running
     end
 
-    num_running =
-      live_ents
-      |> Enum.filter(fn el -> el end)
-      |> Enum.count()
+    live_ents
+    |> Enum.filter(fn el -> el end)
+    |> Enum.count()
   end
 
   defp write_playlist(state) do
@@ -397,7 +396,7 @@ defmodule HlsAdmin.FfmpegServer do
       seg_path
     ]
 
-    ffmpeg_args = ffmpeg_av_args ++ ffmpeg_st_args ++ ffmpeg_hls_args
+    ffmpeg_av_args ++ ffmpeg_st_args ++ ffmpeg_hls_args
   end
 
   defp escape_filtergraph(fg_arg) do
