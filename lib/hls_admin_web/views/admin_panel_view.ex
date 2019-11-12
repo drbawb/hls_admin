@@ -37,6 +37,7 @@ defmodule HlsAdminWeb.AdminView do
     {:ok, socket}
   end
 
+  @impl true
   def render(assigns) do
     PageView.render("admin.html", assigns)
   end
@@ -183,7 +184,7 @@ defmodule HlsAdminWeb.AdminView do
   end
 
   @impl true
-  def handle_event("show_debug", params, socket) do
+  def handle_event("show_debug", _params, socket) do
     {:noreply, assign(socket, :show_debug, not socket.assigns.show_debug)}
   end
 
