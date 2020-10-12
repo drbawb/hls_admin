@@ -359,6 +359,17 @@ defmodule HlsAdmin.FfmpegServer do
     File.close(file)
   end
 
+  defp internal_ffprobe(path) do
+    probe = with {:ok, ffprobe_json} <- run_ffprobe(path),
+                 {:ok, ffprobe_body} <- Jason.decode(ffprobe_json),
+                 {:ok, ffprobe_resp} <- parse_ffprobe_result(ffprobe_body)
+    do
+      {:ok, ffprobe_resp}
+    else
+      err -> {:error, err}
+    end
+  end
+
   defp build_ffmpeg_args(state, mux, prof) do
     level_name = "#{state.playlist}_#{prof.level}"
     seg_path = Path.join([state.root, level_name, "index.m3u8"])
@@ -377,15 +388,40 @@ defmodule HlsAdmin.FfmpegServer do
       "-b:a", prof.bitrate_audio,
       "-c:a", "aac",
       "-preset", "veryfast",
-      "-map", "0:v:#{mux.idx_v}",
-      "-map", "0:a:#{mux.idx_a}",
     ]
 
-    # TODO: -vf subtitles=<path>:si=<idx>
+    # build filtergraph based on subtitle selection
     ffmpeg_st_args = if (not is_nil(mux.st_path)) and (not is_nil(mux.idx_s)) do
-      ["-vf", "subtitles=#{escape_filtergraph(mux.st_path)}:si=#{mux.idx_s}"]
+      # probe the subtitle file
+      {:ok, probe_resp} = internal_ffprobe(mux.st_path)
+
+      # extract the subtitle w/ matching index
+      subtitles =
+        probe_resp[:subtitle]
+        |> Enum.filter(fn el -> el.idx == String.to_integer(mux.idx_s) end)
+        |> Enum.at(0)
+
+
+      # choose overlay or subtitles= filter
+      if subtitles.name == "hdmv_pgs_subtitle" do
+        [
+          "-filter_complex", "[0:v:#{mux.idx_v}][0:s:#{mux.idx_s}]overlay[v]",
+          "-map", "[v]",
+          "-map", "0:a:#{mux.idx_a}"
+        ]
+      else
+        [
+          "-map", "0:v:#{mux.idx_v}",
+          "-map", "0:a:#{mux.idx_a}",
+          "-vf", "subtitles=#{escape_filtergraph(mux.st_path)}:si=#{mux.idx_s}",
+        ]
+      end
     else
-      []
+      # map a/v streams w/o subtitles
+      [
+        "-map", "0:v:#{mux.idx_v}",
+        "-map", "0:a:#{mux.idx_a}",
+      ]
     end
 
     ffmpeg_hls_args = [
