@@ -38,8 +38,8 @@ defmodule HlsAdminWeb do
       import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
 
       # Import convenience functions from live_view
-      import Phoenix.LiveView, only: [live_render: 2, live_render: 3,
-                                      live_link: 1, live_link: 2]
+      import Phoenix.LiveView.Helpers
+
 
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML

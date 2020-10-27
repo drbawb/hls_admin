@@ -10,7 +10,7 @@ defmodule HlsAdminWeb.AdminView do
   #
 
   @impl true
-  def mount(_session, socket) do
+  def mount(_params, _session, socket) do
     {:ok, ui_pid} = GenServer.start_link(HlsAdmin.AdminUI, [])
     status = HlsAdmin.FfmpegServer.status()
     changeset = StreamForm.changeset(%StreamForm{})
