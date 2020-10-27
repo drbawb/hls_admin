@@ -238,16 +238,7 @@ defmodule HlsAdmin.FfmpegServer do
 
   @impl true
   def handle_call({:probe, path}, _from, state) do
-    probe = with {:ok, ffprobe_json} <- run_ffprobe(path),
-                 {:ok, ffprobe_body} <- Jason.decode(ffprobe_json),
-                 {:ok, ffprobe_resp} <- parse_ffprobe_result(ffprobe_body)
-    do
-      {:ok, ffprobe_resp}
-    else
-      err -> {:error, err}
-    end
-
-    {:reply, probe, state}
+    {:reply, internal_ffprobe(path), state}
   end
 
   @impl true
@@ -358,9 +349,9 @@ defmodule HlsAdmin.FfmpegServer do
   end
 
   defp internal_ffprobe(path) do
-    probe = with {:ok, ffprobe_json} <- run_ffprobe(path),
-                 {:ok, ffprobe_body} <- Jason.decode(ffprobe_json),
-                 {:ok, ffprobe_resp} <- parse_ffprobe_result(ffprobe_body)
+    with {:ok, ffprobe_json} <- run_ffprobe(path),
+         {:ok, ffprobe_body} <- Jason.decode(ffprobe_json),
+         {:ok, ffprobe_resp} <- parse_ffprobe_result(ffprobe_body)
     do
       {:ok, ffprobe_resp}
     else

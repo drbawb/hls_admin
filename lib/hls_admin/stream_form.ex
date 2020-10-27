@@ -25,7 +25,7 @@ defmodule HlsAdmin.StreamForm do
     value = Changeset.get_field(changeset, :idx_s)
     has_missing_value = is_nil(value) or value == ""
 
-    new_errors = case {has_st_path, has_missing_value} do
+    case {has_st_path, has_missing_value} do
       {true, true} ->
         [idx_s: {"must be set if st path present", [validation: :subtitle_path]}]
 
