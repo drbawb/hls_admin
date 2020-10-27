@@ -225,8 +225,6 @@ defmodule HlsAdmin.FfmpegServer do
     for {_await_pid, proc} <- state.pid_waits do
       case proc do
         {:running, shell_pid} ->
-          # HACK: we have to send input to get `goon` to pump its
-          #       input loop and process the pending SIGTERM ...
           Logger.warn "terminating #{inspect(shell_pid)}"
           Lacca.kill(shell_pid)
 
@@ -431,6 +429,10 @@ defmodule HlsAdmin.FfmpegServer do
       "-hls_segment_filename", seg_name,
       seg_path
     ]
+
+    Logger.debug "ffmpeg a/v args:\n#{inspect(ffmpeg_av_args)}"
+    Logger.debug "ffmpeg s/t args:\n#{inspect(ffmpeg_st_args)}"
+    Logger.debug "ffmpeg hls args:\n#{inspect(ffmpeg_hls_args)}"
 
     ffmpeg_av_args ++ ffmpeg_st_args ++ ffmpeg_hls_args
   end
