@@ -24,7 +24,7 @@ config :hls_admin, HlsAdminWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "EdsTOPn9NSywmF3rN1hVoXmPiNQG1EphLai47sLmEAXaa5Rd8KbJNrdAfHfRD3xT",
   render_errors: [view: HlsAdminWeb.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: HlsAdmin.PubSub, adapter: Phoenix.PubSub.PG2],
+  pubsub_server: HlsAdmin.PubSub,
   live_view: [signing_salt: "cq6As+iTY6BQ6GLaeombnvdNq7rZ6cwH"]
 
 # Configures Elixir's Logger

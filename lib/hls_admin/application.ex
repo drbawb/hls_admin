@@ -10,6 +10,8 @@ defmodule HlsAdmin.Application do
     children = [
       # Start the Ecto repository
       # HlsAdmin.Repo,
+      # Start the PubSub server
+      {Phoenix.PubSub, [name: HlsAdmin.PubSub, adapter: Phoenix.PubSub.PG2]},
       # Start the endpoint when the application starts
       HlsAdminWeb.Endpoint,
       # Start the FFMPEG Manager Process
