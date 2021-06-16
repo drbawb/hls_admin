@@ -1,8 +1,7 @@
 defmodule HlsAdminWeb.AdminView do
-  use Phoenix.LiveView
+  use HlsAdminWeb, :live_view
 
   alias HlsAdmin.StreamForm
-  alias HlsAdminWeb.PageView
   require Logger
 
   #
@@ -37,10 +36,10 @@ defmodule HlsAdminWeb.AdminView do
     {:ok, socket}
   end
 
-  @impl true
-  def render(assigns) do
-    PageView.render("admin.html", assigns)
-  end
+  # @impl true
+  # def render(assigns) do
+  #   PageView.render("admin.html", assigns)
+  # end
 
   @impl true
   def handle_event("choose_close", _params, socket) do

@@ -2,7 +2,7 @@ defmodule HlsAdminWeb.AuthController do
   use HlsAdminWeb, :controller
 
   @logins %{
-    "himechi" => "$argon2id$v=19$m=131072,t=8,p=4$lKcb49h0KAmBJA8Bxnunsw$HX08DVKeByttXN2ARIafND0dva5AT0pHGNgV1e57hkM",
+    "himechi" => "$argon2id$v=19$m=131072,t=8,p=4$XMJj4JqJ7LQAHlkYUziF2Q$mBAnEVYTORVDhJXu4/gXHla0MsY/3yzxZ9COI6l7EC8"
   }
 
 

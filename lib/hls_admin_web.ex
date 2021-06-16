@@ -28,6 +28,49 @@ defmodule HlsAdminWeb do
     end
   end
 
+  def live_view do 
+    quote do
+      use Phoenix.LiveView,
+        layout: {HlsAdminWeb.LayoutView, "live.html"}
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
+
+      # Import convenience functions from live_view
+      import Phoenix.LiveView.Helpers
+
+
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+
+      import HlsAdminWeb.ErrorHelpers
+      import HlsAdminWeb.Gettext
+      import HlsAdminWeb.Output
+      alias HlsAdminWeb.Router.Helpers, as: Routes
+    end
+  end
+
+  def live_component do
+    quote do
+      use Phoenix.LiveComponent
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
+
+      # Import convenience functions from live_view
+      import Phoenix.LiveView.Helpers
+
+
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+
+      import HlsAdminWeb.ErrorHelpers
+      import HlsAdminWeb.Gettext
+      import HlsAdminWeb.Output
+      alias HlsAdminWeb.Router.Helpers, as: Routes
+    end
+  end
+
   def view do
     quote do
       use Phoenix.View,
@@ -36,10 +79,6 @@ defmodule HlsAdminWeb do
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
-
-      # Import convenience functions from live_view
-      import Phoenix.LiveView.Helpers
-
 
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
