@@ -30,6 +30,18 @@ config :hls_admin, HlsAdminWeb.Endpoint,
     ]
   ]
 
+# This is a list of logins which will be available in the development environment.
+#
+# Please use `mix hls.hash <password>` to hash your password & associate it with a
+# login here.
+#
+# You can use the `config/prod.secret.exs` file to configure this key in your
+# production environment by e.g: reading a file, database, environment variable, etc. 
+#
+config :hls_admin, :logins, %{
+  "admin" => "$argon2id$v=19$m=131072,t=8,p=4$e1l3jrod0geWlTIcyvaU0g$7c6qe0N3Z82ekGhakQCxrsvW7yzRCPodmoWIdCMvCC0"
+}
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed
