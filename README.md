@@ -63,6 +63,12 @@ To start your Phoenix server:
   * Install Node.js dependencies with `cd assets && npm install`
   * Start Phoenix endpoint with `mix phx.server`
 
+Please review the files in the `config/` directory and set them appropriately
+for your environment. In particular, to use the application, the :logins config
+key must be present and contain a valid list of users & Argon2 hashes.
+
+You can populate this config key using the mix task: `mix hls.hash <password>`.
+
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
