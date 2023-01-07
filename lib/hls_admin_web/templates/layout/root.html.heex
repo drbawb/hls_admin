@@ -7,7 +7,7 @@
     <%= csrf_meta_tag() %>
     
     <title>HLS Admin</title>
-    <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/assets/app.css") %>"/>
+    <link rel="stylesheet" href={ Routes.static_path(@conn, "/assets/app.css") }/>
   </head>
   <body>
     <main role="main" class="container">
@@ -15,6 +15,6 @@
       <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
       <%= @inner_content %>
     </main>
-    <script type="text/javascript" src="<%= Routes.static_path(@conn, "/assets/app.js") %>"></script>
+    <script type="text/javascript" src={ Routes.static_path(@conn, "/assets/app.js") }></script>
   </body>
 </html>
