@@ -42,9 +42,12 @@ defmodule HlsAdmin.MixProject do
       {:phoenix_live_reload, "~> 1.3", only: :dev},
       {:phoenix_live_view, "~> 0.16"},
       {:phoenix_live_dashboard, "~> 0.5"},
+
+      {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
+
       {:lacca, "~> 0.2"},
       {:timex, "~> 3.0"},
       {:argon2_elixir, "~> 2.0"},
@@ -61,7 +64,8 @@ defmodule HlsAdmin.MixProject do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"],
+      "assets.deploy": ["esbuild default --minify", "phx.digest"],
     ]
   end
 end
