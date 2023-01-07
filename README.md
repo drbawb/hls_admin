@@ -12,8 +12,18 @@ The program provides a web frontend which allows the user to:
 ## Requirements
 
 - Elixir v1.12+ / Erlang OTP runtime to run the application
-- NodeJS to compile static assets for the web frontend
 - `ffmpeg` and `ffprobe` (v4) in system `PATH` to handle media files
+
+### Build Instructions
+
+1. `git clone https://git.sr.ht/~hime/hls_admin`
+2. `cd hls_admin`
+3. `mix deps.get` and `mix deps.compile`
+4. `iex -S mix phx.server`
+
+Note: Please see `config/dev.exs` and look for the `config :hls_admin, :logins`
+key. It is imperative that this is set correctly for your environment in order
+to be able to use the software.
 
 ## Design
 
