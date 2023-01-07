@@ -11,7 +11,7 @@ The program provides a web frontend which allows the user to:
 
 ## Requirements
 
-- Elixir v1.5+ / Erlang OTP runtime to run the application
+- Elixir v1.12+ / Erlang OTP runtime to run the application
 - NodeJS to compile static assets for the web frontend
 - `ffmpeg` and `ffprobe` (v4) in system `PATH` to handle media files
 
